@@ -1,0 +1,95 @@
+########################
+# CENTOS-IMAGE
+#######################
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "centos/7"
+end
+
+#########################
+# UBUNTU-IMAGE
+#########################
+
+Vagrant.configure("2") do |config|
+    config.vm.box = "ubuntu/trusty64"
+  end
+
+
+###########################
+# ASSIGN DHCP-IP
+##########################
+
+Vagrant.configure("2") do |config|
+    config.vm.network "private_network", type: "dhcp"
+  end
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "public_network"
+  end
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "public_network",
+      use_dhcp_assigned_default_route: true
+  end
+  
+################################
+# ASSIGN STATIC-IP
+#################################
+Vagrant.configure("2") do |config|
+    config.vm.network "private_network", ip: "192.168.50.4"
+  end
+
+config.vm.network "public_network", ip: "192.168.0.17"
+
+config.vm.network "public_network", bridge: "en1: Wi-Fi (AirPort)"
+
+config.vm.network "public_network", bridge: [
+  "en1: Wi-Fi (AirPort)",
+  "en6: Broadcom NetXtreme Gigabit Ethernet Controller",
+]
+
+###############################
+# ASSIGN IPv6-IP
+##############################
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "private_network", ip: "fde4:8dba:82e1::c4"
+  end
+  
+  Vagrant.configure("2") do |config|
+    config.vm.network "private_network",
+      ip: "fde4:8dba:82e1::c4",
+      netmask: "96"
+  end
+
+######################################
+# Disable Auto-Configuration
+######################################
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "private_network", ip: "192.168.50.4",
+      auto_config: false
+  end
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "public_network", auto_config: false
+  end
+  
+
+
+  Vagrant.configure("2") do |config|
+    config.vm.network "public_network", auto_config: false
+  
+    # manual ip
+    config.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig eth1 192.168.0.17 netmask 255.255.255.0 up"
+  
+    # manual ipv6
+    config.vm.provision "shell",
+      run: "always",
+      inline: "ifconfig eth1 inet6 add fc00::17/7"
+  end
+  
+  
+  
