@@ -1,0 +1,72 @@
+# -*- mode: ruby -*-
+# vi:set ft=ruby sw=2 ts=2 sts=2:
+
+ENV['VAGRANT_NO_PARALLEL'] = 'yes'
+
+
+
+VAGRANT_BOX         = "ubuntu/trusty64" #"ubuntu/bionic64"
+VAGRANT_BOX_VERSION = "20190514.0.0" # Specify the Version of ISO Specified Above from Vagrant-Official-Website
+CPUS_MASTER_NODE    = 2     # Specify Number of CPU for Master-Node
+CPUS_WORKER_NODE    = 1     # Specify Number of CPU for Worker-Node
+MEMORY_MASTER_NODE  = 2048  # Specify Number of RAM for Master-Node
+MEMORY_WORKER_NODE  = 1024  # Specify Number of RAM for Worker-Node
+NUM_MASTER_NODE     = 1     # Specifiy Number of Master Node As per your Requirement
+NUM_WORKER_NODE     = 1     # Specifiy Number of Worker Node As per your Requirement
+#WORKER_NODES_COUNT  = 2
+
+IP_NW = "192.168.0.10"   # Specifiy Your Network-Address upto 3-octat
+MASTER_IP_START = 0      # Specify from where IP will start for Master Node
+NODE_IP_START = 1        # Specify from where IP will start for Worker Node
+Vagrant.configure("2") do |config|
+  config.vm.box = VAGRANT_BOX
+  config.vm.box_version = VAGRANT_BOX_VERSION
+  # Disable automatic box update checking.
+  config.vm.box_check_update = false
+  config.vm.provision "shell", path: "ubuntu/initialSetup.sh"
+
+  # Provision Kubernetes-Master Nodes
+  (1..NUM_MASTER_NODE).each do |i|
+      config.vm.define "k8s#{i}" do |node|
+        node.vm.provider "virtualbox" do |vb|
+            vb.name = "k8s#{i}"
+            vb.memory = MEMORY_MASTER_NODE
+            vb.cpus = CPUS_MASTER_NODE
+        end
+        node.vm.hostname = "k8s#{i}"
+        node.vm.network :public_network, ip: IP_NW + "#{MASTER_IP_START + i}"
+        node.vm.network "forwarded_port", guest: 22, host: "#{2710 + i}"
+        node.vm.provision "setup-hosts", :type => "shell", :path => "ubuntu/setup-hosts.sh" do |s|
+          s.args = ["enp0s8"]
+        end
+        node.vm.provision "setup-dns", type: "shell", :path => "ubuntu/update-dns.sh"
+        node.vm.provision "shell", type: "shell", path: "ubuntu/setupmaster.sh"
+      end
+  end
+
+  # Provision Kubernetes-Worker Nodes
+  (1..NUM_WORKER_NODE).each do |i|
+    config.vm.define "KNode#{i}" do |node|
+        node.vm.provider "virtualbox" do |vb|
+            vb.name = "KNode#{i}"
+            vb.memory = MEMORY_WORKER_NODE
+            vb.cpus = CPUS_WORKER_NODE
+        end
+
+        # node.vm.provider :libvirt do |v|  # Use this If you want to use KVM Libvirt Provider
+        #   v.memory  = MEMORY_WORKER_NODE
+        #   v.nested  = true
+        #   v.cpus    = CPUS_WORKER_NODE
+        # end
+  
+        node.vm.hostname = "KNode#{i}"
+        node.vm.network :public_network, ip: IP_NW + "#{NODE_IP_START + i}"
+        node.vm.network "forwarded_port", guest: 22, host: "#{2720 + i}"
+        node.vm.provision "setup-hosts", :type => "shell", :path => "ubuntu/setup-hosts.sh" do |s|
+          s.args = ["enp0s8"]
+        end
+        node.vm.provision "setup-dns", type: "shell", :path => "ubuntu/update-dns.sh"
+        node.vm.provision "setup-dns", type: "shell", :path => "ubuntu/setupworker.sh"
+    end
+  end
+end
